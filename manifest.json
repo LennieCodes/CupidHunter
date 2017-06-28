@@ -1,8 +1,8 @@
 {
-  "name": "__MSG_appName__",
+  "name": "CupidHunter",
   "version": "0.0.1",
   "manifest_version": 2,
-  "description": "__MSG_appDescription__",
+  "description": "An extension that visits OkCupid profiles",
   "icons": {
     "16": "images/icon-16.png",
     "128": "images/icon-128.png"
@@ -10,7 +10,6 @@
   "default_locale": "en",
   "background": {
     "scripts": [
-      "scripts/chromereload.js",
       "scripts/background.js"
     ]
   },
@@ -25,11 +24,11 @@
   "content_scripts": [
     {
       "matches": [
-        "http://*/*",
-        "https://*/*"
+        "http://www.okcupid.com/*",
+        "https://www.okcupid.com/*"
       ],
       "js": [
-        "scripts/contentscript.js"
+        "scripts/main.js"
       ],
       "run_at": "document_end",
       "all_frames": false
@@ -40,7 +39,7 @@
       "19": "images/icon-19.png",
       "38": "images/icon-38.png"
     },
-    "default_title": "cupidhunter",
+    "default_title": "Cupid Hunter",
     "default_popup": "popup.html"
   }
 }
