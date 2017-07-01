@@ -10,7 +10,9 @@
   "default_locale": "en",
   "background": {
     "scripts": [
-      "scripts/background.js"
+      "node_modules/jquery/dist/jquery.min.js",
+      "scripts/background.js",
+      "scripts/popup.js"
     ]
   },
   "permissions": [
@@ -28,10 +30,9 @@
         "https://www.okcupid.com/*"
       ],
       "js": [
+        "node_modules/jquery/dist/jquery.min.js",
         "scripts/main.js"
-      ],
-      "run_at": "document_end",
-      "all_frames": false
+      ]
     }
   ],
   "browser_action": {
