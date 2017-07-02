@@ -29,18 +29,18 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.type === 'crawl complete') {
     cupid.profiles = cupid.profiles.concat(request.profiles);
     cupid.profiles = unique(cupid.profiles);
-
+    console.log('profiles crawled:', cupid.profiles.length);
     if (cupid.profiles.length >= cupid.crawlLimit) {
       cupid.initCrawl = false;
     }    
 
-    var profile = cupid.profiles.shift();
-    cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
+    cupid.goToUrl('http://www.okcupid.com/match');
   }
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   if (changeInfo.status === 'complete' && cupid.tabId == tabId) {
+    
     if (cupid.initCrawl) {
       // if you have not populated profiles array, continue to crawl.
       cupid.getProfiles(); 

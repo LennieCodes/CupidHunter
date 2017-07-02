@@ -11,7 +11,7 @@ $('#crawl').click(function() {
         bg.cupid.initCrawl = true;
         bg.cupid.crawlLimit = $('#crawlLimit').val();
 
-        chrome.tabs.create({url:'http://www.okcupid.com/home', active:false}, function(tab) {
+        chrome.tabs.create({url:'http://www.okcupid.com/match', active:false}, function(tab) {
             bg.cupid.tabId = tab.id;
         });
 
