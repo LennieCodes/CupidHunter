@@ -1,16 +1,10 @@
 'use strict';
 
-// Return unique elements of an array
-function unique(array){
-  return array.filter(function(el, index, arr) {
-    return index == arr.indexOf(el);
-  });
-}
-
 var cupid = {
   profiles: [],
   crawlLimit: 0,
   tabId: 0,
+  profilesCrawled: 0,
   initCrawl: false,
   isCrawling: false
 };
@@ -27,15 +21,24 @@ cupid.getProfiles = function() {
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.type === 'crawl complete') {
+    cupid.profilesCrawled += request.profiles;
     cupid.profiles = cupid.profiles.concat(request.profiles);
-    cupid.profiles = unique(cupid.profiles);
 
-    if (cupid.profiles.length >= cupid.crawlLimit) {
+    if (cupid.profilesCrawled >= cupid.crawlLimit) {
       cupid.initCrawl = false;
-    }    
+    }
 
     var profile = cupid.profiles.shift();
-    cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
+
+    if (profile !== undefined) {
+      // use first profile to trigger another crawl, and add to end of array.
+      cupid.profiles.push(profile);
+      cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
+    }
+    else {
+      cupid.goToUrl('http://www.okcupid.com/home');
+    }
+
   }
 });
 
@@ -53,7 +56,13 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
       }
        
       var profile = cupid.profiles.shift();
-      cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
+      if (profile !== undefined) {
+        cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
+      }
+      else {
+        cupid.goToUrl('http://www.okcupid.com/home');
+      }
+
     }
   }
   
