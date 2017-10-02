@@ -2,12 +2,11 @@
 
 var cupid = {
   profiles: [],
-  crawlLimit: 0,
   tabId: 0,
-  profilesCrawled: 0,
   initCrawl: false,
   isCrawling: false,
-  messageCount: 0
+  threshold: 0,
+  keywords: ''
 };
 
 // Navigates to a URL
@@ -19,33 +18,20 @@ cupid.getProfiles = function() {
   chrome.tabs.sendMessage(cupid.tabId, {type: 'crawl'});
 }
 
-cupid.sendMessageToProfile = function() {
-  chrome.tabs.sendMessage(cupid.tabId, {type: 'message'});
+cupid.scanProfile = function() {
+  chrome.tabs.sendMessage(cupid.tabId, {type: 'scan', keywords: cupid.keywords, threshold: cupid.threshold});
 }
 
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.type == 'crawl_complete') {
 
-    cupid.profilesCrawled += request.profiles.length;
-    console.log('profiles crawled:', cupid.profilesCrawled);
-    console.log('crawlLimit', cupid.crawlLimit);
-    cupid.profiles = cupid.profiles.concat(request.profiles);
-
-    if (cupid.profilesCrawled >= cupid.crawlLimit) {
-      cupid.initCrawl = false;
-    }
-
+    cupid.profiles = request.profiles;
+    cupid.initCrawl = false;
     var profile = cupid.profiles.shift();
 
     if (profile !== undefined) {
-      console.log('going to profile' + profile);
-      // use first profile to trigger another crawl, and add to end of array.
-      // if you are no longer crawling, you are going to visit this profile and send a message.
-      // so no need to add them back to the array (which would send them another message!). 
-      if (cupid.initCrawl) {
-        cupid.profiles.push(profile);
-      }
+      console.log('going to profile' + profile); 
       cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
     }
     else {
@@ -56,8 +42,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 });
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  if (request.type == 'message_sent') {
-    cupid.messageCount++;
+  if (request.type == 'profile_scanned') {
     
     if (cupid.profiles.length === 0) {
       cupid.isCrawling = false;
@@ -66,9 +51,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     do {
       var profile = cupid.profiles.shift();
-    } while (profile === undefined);
+    } while (profile === undefined && cupid.profiles.length > 0);
 
-    console.log('sending message to:' + profile);
     cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
 
   }
@@ -77,13 +61,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   if (changeInfo.status === 'complete' && cupid.tabId == tabId) {
     if (cupid.initCrawl) {
-      // if you have not populated profiles array, continue to crawl.
+      // you have not populated profiles array, crawl matches.
       console.log('inside initCrawl block');
       cupid.getProfiles(); 
     }
     else {
-      console.log('inside Message block');
-      cupid.sendMessageToProfile();
+      console.log('inside scan block');
+      cupid.scanProfile();
     }
   }
   

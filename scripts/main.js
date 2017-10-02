@@ -1,17 +1,18 @@
-var messages = [
-  'Hey, My name is Lennie. I really like your profile. How are you?',
-  'Hey I checked out your profile and you seem cool. What are you up to?',
-  'Hey I checked out your profile and you seem cool. How\'s your day going?'
-];
+function crawlPage(stopper) {
+  console.log('crawlPage called');
+  document.documentElement.scrollTop = document.documentElement.scrollTop + 2550;
+  setTimeout(getProfiles(), 3000);
 
-// sleep time expects milliseconds
-function sleep (time) {
-  return new Promise((resolve) => setTimeout(resolve, time));
+  if ($('#match_bs').length !== 0) {
+    // you've reached the bottom of the page
+    clearInterval(stopper);
+    console.log('reached bottom of the well');
+    let profiles = JSON.parse(localStorage.getItem("profileCache"));
+    chrome.runtime.sendMessage({profiles: profiles, type: 'crawl_complete'});
+  }
 }
 
-
 function getProfiles() {
-  var profiles = [];
   var profileCache = JSON.parse(localStorage.getItem("profileCache"));
 
   // TODO: go through every message sent and add to profileCache if null
@@ -21,17 +22,16 @@ function getProfiles() {
   }
 
   // code review this.
-  $('[data-profile-popover]').each(function() {
+  $('.image_link').not('.image_link.visited').each(function() {
       var profile = extractProfileName($(this).attr('href'));
       if (profileCache.indexOf(profile) === -1) {
-        profiles.push(profile);
         profileCache.push(profile);
       }
   });
 
+  $('.image_link').addClass('visited');
+
   localStorage.setItem("profileCache", JSON.stringify(profileCache));
-  
-  return profiles;
 }
 
 function extractProfileName(profile) {
@@ -42,27 +42,51 @@ function extractProfileName(profile) {
     return profile;
 }
 
-function sendMessageToProfile() {
-  var index = Math.floor(Math.random() * 3);
-  $('button.actions2015-chat').click();
-  sleep(2000).then(function() {
-    $('.inputcontainer').find($('textarea:not(.clone)')).val(messages[index]);
-    $('form.compose.okform').find(':submit').click();
-  });
-}
+function scanProfile(keywords, threshold) {
+  
+  const keywordArr = keywords.trim().split(/\s*,\s*/);
+  
+  let regExpArr = [];
+  let keywordMap = [];
+  for (let i = 0; i < keywordArr.length; i++) {
+    regExpArr.push(new RegExp(keywordArr[i], "ig"));
+  }
 
+  $('.essays2015-essay-content').each(function() {
+    
+    let content = $(this).html();
+    
+    for (let i = 0; i < regExpArr.length; i++) {
+      content = content.replace(regExpArr[i], function(match) {
+        if (keywordMap.indexOf(match) === -1) {
+          keywordMap.push(match);
+        }
+        return match;  
+      });
+    }
+
+  });
+
+  if (keywordMap.length >= threshold) {
+    let matchCache = JSON.parse(localStorage.getItem("matchCache"));
+    
+    if (matchCache === null) {
+      matchCache = [];
+    }
+
+    matchCache.push(window.location.href);
+
+    localStorage.setItem("matchCache", JSON.stringify(matchCache));
+  }
+}
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.type == 'crawl') {
-    var profiles = getProfiles();
-    console.log(profiles);
-    chrome.runtime.sendMessage({profiles: profiles, type: 'crawl_complete'});
+    // bug here - setInterval doesn't work in content script
+    var crawlPageStopper = setInterval(crawlPage(crawlPageStopper), 5000);
   }
-  else if (request.type == 'message') {
-    sendMessageToProfile();
-    sleep(5000).then(function() {
-      chrome.runtime.sendMessage({type: 'message_sent'});
-    });
-
+  else if (request.type == 'scan') {
+    scanProfile(request.keywords, request.threshold);
+    chrome.runtime.sendMessage({type: 'profile_scanned'});
   }
 });
