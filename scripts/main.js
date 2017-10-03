@@ -3,9 +3,9 @@ function crawlPage(stopper) {
   document.documentElement.scrollTop = document.documentElement.scrollTop + 2550;
   setTimeout(getProfiles(), 3000);
 
+  // you've reached the bottom of the page
   if ($('#match_bs').length !== 0) {
-    // you've reached the bottom of the page
-    clearInterval(stopper);
+    window.clearInterval(stopper);
     console.log('reached bottom of the well');
     let profiles = JSON.parse(localStorage.getItem("profileCache"));
     chrome.runtime.sendMessage({profiles: profiles, type: 'crawl_complete'});
@@ -83,7 +83,9 @@ function scanProfile(keywords, threshold) {
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.type == 'crawl') {
     // bug here - setInterval doesn't work in content script
-    var crawlPageStopper = setInterval(crawlPage(crawlPageStopper), 5000);
+    var stopper = window.setInterval(function() {
+      crawlPage(stopper);
+    }, 5000);
   }
   else if (request.type == 'scan') {
     scanProfile(request.keywords, request.threshold);
