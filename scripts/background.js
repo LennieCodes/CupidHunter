@@ -1,18 +1,12 @@
 'use strict';
 
-// Return unique elements of an array
-function unique(array){
-  return array.filter(function(el, index, arr) {
-    return index == arr.indexOf(el);
-  });
-}
-
 var cupid = {
   profiles: [],
-  crawlLimit: 0,
   tabId: 0,
   initCrawl: false,
-  isCrawling: false
+  isCrawling: false,
+  threshold: 0,
+  keywords: ''
 };
 
 // Navigates to a URL
@@ -24,36 +18,56 @@ cupid.getProfiles = function() {
   chrome.tabs.sendMessage(cupid.tabId, {type: 'crawl'});
 }
 
+cupid.scanProfile = function() {
+  chrome.tabs.sendMessage(cupid.tabId, {type: 'scan', keywords: cupid.keywords, threshold: cupid.threshold});
+}
+
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  if (request.type === 'crawl complete') {
-    cupid.profiles = cupid.profiles.concat(request.profiles);
-    cupid.profiles = unique(cupid.profiles);
-    console.log('profiles crawled:', cupid.profiles.length);
-    if (cupid.profiles.length >= cupid.crawlLimit) {
-      cupid.initCrawl = false;
-    }    
+  if (request.type == 'crawl_complete') {
 
-    cupid.goToUrl('http://www.okcupid.com/match');
+    cupid.profiles = request.profiles;
+    cupid.initCrawl = false;
+    var profile = cupid.profiles.shift();
+
+    if (profile !== undefined) {
+      console.log('going to profile' + profile); 
+      cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
+    }
+    else {
+      cupid.goToUrl('http://www.okcupid.com/home');
+    }
+
+  }
+});
+
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  if (request.type == 'profile_scanned') {
+    
+    if (cupid.profiles.length === 0) {
+      cupid.isCrawling = false;
+      return;
+    }
+
+    do {
+      var profile = cupid.profiles.shift();
+    } while (profile === undefined && cupid.profiles.length > 0);
+
+    cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
+
   }
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   if (changeInfo.status === 'complete' && cupid.tabId == tabId) {
-    
     if (cupid.initCrawl) {
-      // if you have not populated profiles array, continue to crawl.
+      // you have not populated profiles array, crawl matches.
+      console.log('inside initCrawl block');
       cupid.getProfiles(); 
     }
     else {
-      // start visiting profiles.
-      if (cupid.profiles.length === 0) {
-        cupid.isCrawling = false;
-        return;
-      }
-       
-      var profile = cupid.profiles.shift();
-      cupid.goToUrl('http://www.okcupid.com/profile/' + profile);
+      console.log('inside scan block');
+      cupid.scanProfile();
     }
   }
   
