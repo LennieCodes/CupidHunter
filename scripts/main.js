@@ -52,7 +52,7 @@ function scanProfile(keywords, threshold) {
     regExpArr.push(new RegExp(keywordArr[i], "ig"));
   }
 
-  $('.essays2015-essay-content').each(function() {
+  $('.profile-essay').each(function() {
     
     let content = $(this).html();
     
@@ -74,7 +74,7 @@ function scanProfile(keywords, threshold) {
       matchCache = [];
     }
 
-    matchCache.push(window.location.href);
+    matchCache.push({url: window.location.href, count: keywordMap.length});
 
     localStorage.setItem("matchCache", JSON.stringify(matchCache));
   }
