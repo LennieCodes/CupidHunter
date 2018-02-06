@@ -1,3 +1,5 @@
+const profilesToVisit = [];
+
 function crawlPage(stopper) {
   console.log('crawlPage called');
   document.documentElement.scrollTop = document.documentElement.scrollTop + 2550;
@@ -7,31 +9,31 @@ function crawlPage(stopper) {
   if ($('#match_bs').length !== 0) {
     window.clearInterval(stopper);
     console.log('reached bottom of the well');
-    let profiles = JSON.parse(localStorage.getItem("profileCache"));
-    chrome.runtime.sendMessage({profiles: profiles, type: 'crawl_complete'});
+
+    chrome.runtime.sendMessage({profiles: profilesToVisit, type: 'crawl_complete'});
   }
 }
 
 function getProfiles() {
-  var profileCache = JSON.parse(localStorage.getItem("profileCache"));
+  let visitedProfilesCache = JSON.parse(localStorage.getItem("visitedProfilesCache"));
 
-  // TODO: go through every message sent and add to profileCache if null
-  if (profileCache === null) {
-    profileCache = [];
-    localStorage.setItem("profileCache", JSON.stringify(profileCache));
+  if (visitedProfilesCache === null) {
+    visitedProfilesCache = [];
+    localStorage.setItem("visitedProfilesCache", JSON.stringify(visitedProfilesCache));
   }
 
   // code review this.
   $('.image_link').not('.image_link.visited').each(function() {
       var profile = extractProfileName($(this).attr('href'));
-      if (profileCache.indexOf(profile) === -1) {
-        profileCache.push(profile);
+      if (visitedProfilesCache.indexOf(profile) === -1) {
+        visitedProfilesCache.push(profile);
+        profilesToVisit.push(profile);
       }
   });
 
   $('.image_link').addClass('visited');
 
-  localStorage.setItem("profileCache", JSON.stringify(profileCache));
+  localStorage.setItem("visitedProfilesCache", JSON.stringify(visitedProfilesCache));
 }
 
 function extractProfileName(profile) {
@@ -68,21 +70,20 @@ function scanProfile(keywords, threshold) {
   });
 
   if (keywordMap.length >= threshold) {
-    let matchCache = JSON.parse(localStorage.getItem("matchCache"));
+    let resultCache = JSON.parse(localStorage.getItem("resultCache"));
     
-    if (matchCache === null) {
-      matchCache = [];
+    if (resultCache === null) {
+      resultCache = [];
     }
 
-    matchCache.push({url: window.location.href, count: keywordMap.length});
+    resultCache.push({url: window.location.href, count: keywordMap.length});
 
-    localStorage.setItem("matchCache", JSON.stringify(matchCache));
+    localStorage.setItem("resultCache", JSON.stringify(resultCache));
   }
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.type == 'crawl') {
-    // bug here - setInterval doesn't work in content script
     var stopper = window.setInterval(function() {
       crawlPage(stopper);
     }, 5000);
