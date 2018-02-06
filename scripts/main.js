@@ -22,11 +22,10 @@ function getProfiles() {
     localStorage.setItem("visitedProfilesCache", JSON.stringify(visitedProfilesCache));
   }
 
-  // code review this.
+
   $('.image_link').not('.image_link.visited').each(function() {
       var profile = extractProfileName($(this).attr('href'));
       if (visitedProfilesCache.indexOf(profile) === -1) {
-        visitedProfilesCache.push(profile);
         profilesToVisit.push(profile);
       }
   });
@@ -45,7 +44,9 @@ function extractProfileName(profile) {
 }
 
 function scanProfile(keywords, threshold) {
-  
+  let visitedProfilesCache = JSON.parse(localStorage.getItem("visitedProfilesCache"));
+  let profile = extractProfileName(window.location.href);
+
   const keywordArr = keywords.trim().split(/\s*,\s*/);
   
   let regExpArr = [];
@@ -80,6 +81,8 @@ function scanProfile(keywords, threshold) {
 
     localStorage.setItem("resultCache", JSON.stringify(resultCache));
   }
+  visitedProfilesCache.push(profile);
+  localStorage.setItem("visitedProfilesCache", JSON.stringify(visitedProfilesCache));
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
